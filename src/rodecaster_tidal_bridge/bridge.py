@@ -19,14 +19,15 @@ async def run_bridge(cfg: Config) -> None:
     throttle = TrailingThrottle(min_interval_s=interval)
 
     log.info(
-        "bridge running: matching MIDI port %r, ch=%d cc=%d, throttle=%dHz",
-        cfg.midi_port_name_contains, cfg.midi_channel, cfg.midi_cc, cfg.throttle_max_hz,
+        "bridge running: matching MIDI port %r, ch=%d cc=%d, throttle=%dHz, curve=%.2f",
+        cfg.midi_port_name_contains, cfg.midi_channel, cfg.midi_cc,
+        cfg.throttle_max_hz, cfg.curve_exponent,
     )
     try:
         async for ev in stream_cc_events(cfg.midi_port_name_contains):
             if ev.channel != cfg.midi_channel or ev.cc != cfg.midi_cc:
                 continue
-            volume = midi_to_volume(ev.value)
+            volume = midi_to_volume(ev.value, cfg.curve_exponent)
             await throttle.submit(volume, sink.set_volume)
     finally:
         await throttle.flush()

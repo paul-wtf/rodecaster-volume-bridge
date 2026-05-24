@@ -10,6 +10,7 @@ from .bridge import run_bridge
 from .config import (
     Config,
     ConfigMissingError,
+    DEFAULT_CURVE_EXPONENT,
     default_config_path,
     load_config,
     save_config,
@@ -73,6 +74,7 @@ async def _cmd_learn(args: argparse.Namespace) -> int:
         midi_cc=cc,
         tidal_ws_url=DEFAULT_WS_URL,
         throttle_max_hz=DEFAULT_HZ,
+        curve_exponent=DEFAULT_CURVE_EXPONENT,
     )
     save_config(cfg, args.config)
     print(f"Erkannt: channel={channel} cc={cc}")

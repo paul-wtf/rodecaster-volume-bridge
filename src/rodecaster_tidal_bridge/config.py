@@ -12,6 +12,9 @@ class ConfigMissingError(FileNotFoundError):
     pass
 
 
+DEFAULT_CURVE_EXPONENT = 2.0
+
+
 @dataclass(frozen=True)
 class Config:
     midi_port_name_contains: str
@@ -19,6 +22,7 @@ class Config:
     midi_cc: int
     tidal_ws_url: str
     throttle_max_hz: int
+    curve_exponent: float = DEFAULT_CURVE_EXPONENT
 
 
 def default_config_path() -> Path:
@@ -31,12 +35,14 @@ def load_config(path: Path) -> Config:
         raise ConfigMissingError(f"Config file not found: {path}")
     with path.open("rb") as f:
         data = tomllib.load(f)
+    scale = data.get("scale", {})
     return Config(
         midi_port_name_contains=data["midi"]["port_name_contains"],
         midi_channel=int(data["midi"]["channel"]),
         midi_cc=int(data["midi"]["cc"]),
         tidal_ws_url=data["tidal"]["ws_url"],
         throttle_max_hz=int(data["throttle"]["max_hz"]),
+        curve_exponent=float(scale.get("curve_exponent", DEFAULT_CURVE_EXPONENT)),
     )
 
 
@@ -50,6 +56,7 @@ def save_config(cfg: Config, path: Path) -> None:
         },
         "tidal": {"ws_url": cfg.tidal_ws_url},
         "throttle": {"max_hz": cfg.throttle_max_hz},
+        "scale": {"curve_exponent": cfg.curve_exponent},
     }
     with path.open("wb") as f:
         tomli_w.dump(payload, f)

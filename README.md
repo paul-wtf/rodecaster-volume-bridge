@@ -60,6 +60,12 @@ ws_url = "ws://localhost:24123"
 
 [throttle]
 max_hz = 30
+
+[scale]
+# Volume curve: volume = (midi/127)^curve_exponent * 100
+# 1.0 = linear, 2.0 = square law (audio-taper default — finer at low end),
+# 2.5–3.0 = even more low-end resolution at the cost of upper-end sensitivity.
+curve_exponent = 2.0
 ```
 
 ## Entwicklung

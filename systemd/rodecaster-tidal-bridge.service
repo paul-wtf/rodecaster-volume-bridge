@@ -1,0 +1,11 @@
+[Unit]
+Description=RodeCaster → Tidal MIDI Bridge
+After=sound.target
+
+[Service]
+ExecStart=%h/.local/bin/rodecaster-tidal-bridge
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target

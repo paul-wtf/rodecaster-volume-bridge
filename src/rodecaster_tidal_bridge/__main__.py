@@ -24,7 +24,7 @@ from .midi_source import find_port, list_input_ports, stream_cc_events
 # uses a different ALSA name, pass --port-hint to override.
 DEFAULT_PORT_HINT = "RODECaster"
 DEFAULT_WS_URL = "ws://localhost:24123"
-DEFAULT_HZ = 30
+DEFAULT_HZ = 100
 
 
 def main() -> int:

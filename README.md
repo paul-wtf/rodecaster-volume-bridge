@@ -59,7 +59,7 @@ cc = 7
 ws_url = "ws://localhost:24123"
 
 [throttle]
-max_hz = 30
+max_hz = 100
 
 [scale]
 # Volume curve: volume = (midi/127)^curve_exponent * 100

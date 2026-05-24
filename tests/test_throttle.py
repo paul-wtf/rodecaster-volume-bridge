@@ -62,6 +62,31 @@ async def test_after_window_next_call_is_immediate_again():
     assert sent == [10, 99]
 
 
+@pytest.mark.asyncio
+async def test_submit_after_burst_emits_immediately_when_task_stale():
+    """After a burst's trailing-edge emit has completed, ``_task`` is done but
+    not None. The next submit (well past the window) must still take the
+    immediate fast path, not schedule yet another delayed emit."""
+    sent: list[int] = []
+    clock = FakeClock()
+    throttle = TrailingThrottle(min_interval_s=0.033, time_fn=clock.time, sleep_fn=clock_sleep(clock))
+
+    # produce a burst so the throttle creates and finishes a _fire_later task
+    await throttle.submit(10, lambda v: sent.append(v))
+    clock.advance(0.005)
+    await throttle.submit(20, lambda v: sent.append(v))
+    await throttle.flush()
+    assert sent == [10, 20]
+
+    # advance well past the throttle window, then submit again
+    clock.advance(1.0)
+    await throttle.submit(77, lambda v: sent.append(v))
+
+    # 77 must be emitted immediately (synchronously inside submit),
+    # without needing flush or another clock advance
+    assert sent == [10, 20, 77]
+
+
 def clock_sleep(clock: FakeClock) -> Callable[[float], "asyncio.Future"]:
     async def _sleep(dt: float) -> None:
         clock.advance(dt)

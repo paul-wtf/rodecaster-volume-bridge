@@ -26,13 +26,14 @@ class TrailingThrottle:
 
     async def submit(self, value: int, emit: Callable[[int], None]) -> None:
         now = self._time()
-        if now - self._last_send >= self._interval and self._task is None:
+        task_idle = self._task is None or self._task.done()
+        if now - self._last_send >= self._interval and task_idle:
             emit(value)
             self._last_send = now
             return
         self._pending_value = value
         self._pending_emit = emit
-        if self._task is None or self._task.done():
+        if task_idle:
             self._task = asyncio.create_task(self._fire_later())
 
     async def _fire_later(self) -> None:

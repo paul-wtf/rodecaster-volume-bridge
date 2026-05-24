@@ -18,6 +18,9 @@ from .learn import detect_fader_cc
 from .midi_source import find_port, list_input_ports, stream_cc_events
 
 
+# Note: ALSA exposes the port without the Ø ligature. `aconnect -i` reports
+# "RODECaster Duo:RODECaster Duo MIDI 1 28:0". If a different RodeCaster model
+# uses a different ALSA name, pass --port-hint to override.
 DEFAULT_PORT_HINT = "RODECaster"
 DEFAULT_WS_URL = "ws://localhost:24123"
 DEFAULT_HZ = 30
@@ -40,9 +43,12 @@ def main() -> int:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
 
-    if args.learn:
-        return asyncio.run(_cmd_learn(args))
-    return asyncio.run(_cmd_run(args))
+    try:
+        if args.learn:
+            return asyncio.run(_cmd_learn(args))
+        return asyncio.run(_cmd_run(args))
+    except KeyboardInterrupt:
+        return 0
 
 
 async def _cmd_learn(args: argparse.Namespace) -> int:
@@ -81,6 +87,10 @@ async def _cmd_run(args: argparse.Namespace) -> int:
         print(f"Keine Config unter {args.config}.", file=sys.stderr)
         print('Erst `rodecaster-tidal-bridge --learn` ausführen.', file=sys.stderr)
         return 1
+    if find_port(cfg.midi_port_name_contains) is None:
+        print(f"No MIDI input contains {cfg.midi_port_name_contains!r}.", file=sys.stderr)
+        print(f"Available: {list_input_ports()}", file=sys.stderr)
+        return 2
     await run_bridge(cfg)
     return 0
 

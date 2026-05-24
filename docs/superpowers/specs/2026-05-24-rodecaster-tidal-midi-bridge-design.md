@@ -74,11 +74,11 @@ max_hz = 30
 ## Daten-Fluss
 
 1. `midi_source` empfängt MIDI-CC-Message.
-2. `bridge.on_midi(ch, cc, value)`:
+2. `bridge.on_midi(ch, cc, value)` (trailing-edge throttle):
    - Wenn `(ch, cc)` ≠ konfiguriertes Pair → ignorieren.
-   - Wenn letzter Send < 33 ms her → pending-Wert merken, Timer schedulen.
-   - Sonst: sofort `tidal_sink.set_volume(scale(value))`.
-3. `tidal_sink` schreibt in Queue, Hintergrund-Task sendet WebSocket-Frame.
+   - Wenn letzter Send ≥ 33 ms her und kein Timer läuft → sofort senden, Zeitstempel merken.
+   - Sonst: `pending_value` auf den jüngsten Wert setzen (überschreibt evtl. vorherigen pending). Falls noch kein Timer läuft, einen schedulen, der nach Ablauf des Intervalls den dann aktuellen `pending_value` sendet und sich selbst löscht.
+3. `tidal_sink.set_volume()` legt in Queue ab. Hintergrund-Coroutine zieht das Element raus; falls die WebSocket-Verbindung gerade getrennt ist, kommen weitere Updates dahinter — vor dem Send wird die Queue auf das letzte Element reduziert (Coalescing als zweite Verteidigungslinie gegen Reconnect-Backlog).
 4. `@vmohammad/api` setzt Tidal-Volume und antwortet mit `{type:"ok"}` — wir ignorieren die Response.
 
 ## Fehlerbehandlung

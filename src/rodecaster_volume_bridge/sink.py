@@ -1,18 +1,22 @@
 from __future__ import annotations
 
-from typing import Protocol, runtime_checkable
+from typing import Protocol
 
 from .config import Config, InvalidConfigError
 from .spotify_sink import SpotifySink
 from .tidal_sink import TidalSink
 
 
-@runtime_checkable
 class VolumeSink(Protocol):
     """A destination for volume values in the range 0..100.
 
     set_volume() runs on the MIDI path: it must never block and never raise.
     Delivery is the sink's own problem, handled by its background task.
+
+    start() may perform I/O and raise a fatal setup error (e.g. SpotifySink
+    raises SessionBusUnavailableError when it cannot reach the D-Bus session
+    bus); TidalSink's start() by contrast returns immediately and never
+    raises. Callers must be prepared for start() to fail.
     """
 
     async def start(self) -> None: ...

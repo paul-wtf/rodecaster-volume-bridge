@@ -97,7 +97,7 @@ class SpotifySink:
         """Subscribe to NameOwnerChanged for our bus name and seed the
         current ownership state."""
         assert self._bus is not None
-        await self._bus.call(Message(
+        add_match_reply = await self._bus.call(Message(
             destination="org.freedesktop.DBus",
             path="/org/freedesktop/DBus",
             interface="org.freedesktop.DBus",
@@ -109,6 +109,16 @@ class SpotifySink:
                 f"arg0='{self._bus_name}'"
             ],
         ))
+        if add_match_reply.message_type == MessageType.ERROR:
+            # A silently-rejected match rule (e.g. a quote in bus_name, or
+            # hitting the per-connection match-rule limit) would otherwise
+            # leave the handler registered but never fed by the bus --
+            # producing a silent, permanent hang whenever the player is
+            # absent. Fail loudly instead.
+            raise SessionBusUnavailableError(
+                f"D-Bus rejected the NameOwnerChanged subscription for "
+                f"{self._bus_name!r}: {add_match_reply.body}"
+            )
         self._bus.add_message_handler(self._on_name_owner_changed)
 
         reply = await self._bus.call(Message(
@@ -122,7 +132,7 @@ class SpotifySink:
         if reply.message_type != MessageType.ERROR and reply.body[0]:
             self._owned.set()
         else:
-            log.info("%s not on the bus yet; waiting", self._bus_name)
+            log.warning("%s not on the bus yet; waiting", self._bus_name)
 
     def _on_name_owner_changed(self, msg: Message) -> None:
         # Returning None leaves the message unhandled so other handlers see it.
@@ -235,6 +245,13 @@ class SpotifySink:
             # itself was lost, not merely when the player is absent -- get a
             # fresh connection and re-arm the name watch before resuming.
             self._owned.clear()
+            if self._bus is not None:
+                # Genuinely dead by this point, so disconnect() should be a
+                # no-op -- but be defensive: a spurious reconnect must not
+                # leak the old connection's file descriptor, and a dead bus
+                # object raising here must not stop us from reconnecting.
+                with contextlib.suppress(Exception):
+                    self._bus.disconnect()
             try:
                 self._bus = await self._connect()
                 await self._watch_name()

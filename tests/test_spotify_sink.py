@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 
 import pytest
@@ -175,35 +176,63 @@ async def test_redrains_to_latest_after_waiting_for_player():
 
 
 @pytest.mark.asyncio
-async def test_reconnects_after_own_bus_connection_lost():
+async def test_reconnects_after_own_bus_connection_lost(caplog):
     """Simulates the D-Bus daemon dying out from under the sink (e.g.
     `systemctl --user restart dbus`): the sink's own connection -- not the
     player's -- is severed. dbus-fast clears all user message handlers on
     disconnect, so NameOwnerChanged can never fire again on that connection;
     the sink must notice its own connection died, reconnect, and keep
     delivering values instead of getting stuck retrying against a dead
-    connection forever."""
+    connection forever.
+
+    Critically, the *player's* bus connection is severed in the same breath
+    as the sink's, so the name genuinely has no owner by the time the sink's
+    reconnect calls NameHasOwner -- the seed check alone cannot set _owned.
+    Only a NameOwnerChanged signal reaching the *new* connection's re-armed
+    watch (AddMatch + add_message_handler redone in _watch_name()) can
+    deliver the value that's queued afterwards. If reconnect merely swapped
+    in a new bus without re-arming that watch, the assertion below would
+    time out instead of passing.
+    """
+    caplog.set_level(logging.INFO, logger="rodecaster_volume_bridge.spotify_sink")
     fake_bus, player = await export_fake()
     sink = SpotifySink(
         bus_name=TEST_BUS_NAME, backoff_start=0.02, backoff_max=0.05
     )
     await sink.start()
+    second_bus = None
     try:
         sink.set_volume(33)
         assert await wait_for(lambda: player.sets), "initial send failed"
 
         # Sever the sink's own connection -- not the player's -- to simulate
-        # the D-Bus daemon (or just our link to it) dying.
+        # the D-Bus daemon (or just our link to it) dying. Also take the
+        # player off the bus at the same time, so the name has genuinely no
+        # owner once the sink reconnects.
         sink._bus.disconnect()
+        fake_bus.disconnect()
 
-        sink.set_volume(66)
-        assert await wait_for(lambda: len(player.sets) >= 2, timeout=5.0), (
-            "value was not delivered after the sink's bus connection died"
+        sink.set_volume(66)  # queued while the player is absent
+
+        # Wait for the reconnect to actually finish -- new connection up and
+        # NameOwnerChanged watch re-armed -- before bringing the player
+        # back, so "player reappears only after the new watch is live" is
+        # guaranteed by ordering, not a timing accident.
+        assert await wait_for(
+            lambda: "reconnected to the D-Bus session bus" in caplog.text,
+            timeout=5.0,
+        ), "sink never reconnected"
+
+        second_bus, player2 = await export_fake()
+        assert await wait_for(lambda: player2.sets, timeout=5.0), (
+            "value was not delivered after the player reappeared on the "
+            "new connection -- NameOwnerChanged was not re-subscribed"
         )
-        assert player.sets[-1] == pytest.approx(0.66)
+        assert player2.sets[-1] == pytest.approx(0.66)
     finally:
         await sink.stop()
-        fake_bus.disconnect()
+        if second_bus is not None:
+            second_bus.disconnect()
 
 
 @pytest.mark.asyncio

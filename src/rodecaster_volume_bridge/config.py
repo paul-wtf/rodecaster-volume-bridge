@@ -56,6 +56,14 @@ def load_config(path: Path) -> Config:
     scale = data.get("scale", {})
     tidal = data.get("tidal", {})
     spotify = data.get("spotify", {})
+
+    spotify_bus_name = spotify.get("bus_name", DEFAULT_SPOTIFY_BUS_NAME)
+    if not isinstance(spotify_bus_name, str) or not spotify_bus_name.strip():
+        raise InvalidConfigError(
+            f"Config {path}: [spotify] bus_name must be a non-empty string, "
+            f"got {spotify_bus_name!r}."
+        )
+
     return Config(
         midi_port_name_contains=data["midi"]["port_name_contains"],
         midi_channel=int(data["midi"]["channel"]),
@@ -63,7 +71,7 @@ def load_config(path: Path) -> Config:
         throttle_max_hz=int(data["throttle"]["max_hz"]),
         target=target,
         tidal_ws_url=tidal.get("ws_url"),
-        spotify_bus_name=spotify.get("bus_name", DEFAULT_SPOTIFY_BUS_NAME),
+        spotify_bus_name=spotify_bus_name,
         curve_exponent=float(scale.get("curve_exponent", DEFAULT_CURVE_EXPONENT)),
     )
 

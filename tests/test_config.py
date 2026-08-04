@@ -182,6 +182,50 @@ def test_load_unknown_target_raises(tmp_path: Path):
     assert "deezer" in str(excinfo.value)
 
 
+def test_load_non_string_spotify_bus_name_raises(tmp_path: Path):
+    cfg_file = tmp_path / "config.toml"
+    cfg_file.write_text(textwrap.dedent("""
+        target = "spotify"
+
+        [midi]
+        port_name_contains = "RODECaster"
+        channel = 1
+        cc = 7
+
+        [spotify]
+        bus_name = 42
+
+        [throttle]
+        max_hz = 100
+    """).strip())
+
+    with pytest.raises(InvalidConfigError) as excinfo:
+        load_config(cfg_file)
+    assert "[spotify] bus_name" in str(excinfo.value)
+
+
+def test_load_empty_spotify_bus_name_raises(tmp_path: Path):
+    cfg_file = tmp_path / "config.toml"
+    cfg_file.write_text(textwrap.dedent("""
+        target = "spotify"
+
+        [midi]
+        port_name_contains = "RODECaster"
+        channel = 1
+        cc = 7
+
+        [spotify]
+        bus_name = "   "
+
+        [throttle]
+        max_hz = 100
+    """).strip())
+
+    with pytest.raises(InvalidConfigError) as excinfo:
+        load_config(cfg_file)
+    assert "[spotify] bus_name" in str(excinfo.value)
+
+
 def test_save_writes_both_target_blocks(tmp_path: Path):
     """Both blocks are written with defaults so switching targets is a
     one-line edit."""

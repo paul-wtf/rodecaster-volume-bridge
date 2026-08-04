@@ -14,7 +14,16 @@ log = logging.getLogger(__name__)
 
 async def run_bridge(cfg: Config) -> None:
     sink = make_sink(cfg)
-    await sink.start()
+    try:
+        await sink.start()
+    except BaseException:
+        # A sink that connected and then failed partway through its own
+        # setup (e.g. SpotifySink after the D-Bus connect succeeds but
+        # NameOwnerChanged subscription fails) must not leak that
+        # connection. The throttle doesn't exist yet, so this can't just
+        # be folded into the try/finally below.
+        await sink.stop()
+        raise
     interval = 1.0 / cfg.throttle_max_hz
     throttle = TrailingThrottle(min_interval_s=interval)
 

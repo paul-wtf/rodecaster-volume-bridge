@@ -33,6 +33,12 @@ cd ~/git/rodecaster-volume-bridge
 pip install --user .
 ```
 
+Auf NixOS fehlen die ALSA-Header, die `python-rtmidi` zum Bauen braucht:
+
+```bash
+nix-shell -p pkg-config alsa-lib --run 'pip install --user .'
+```
+
 ## Setup (einmalig)
 
 ```bash
@@ -109,4 +115,11 @@ eines Flatpak-Builds.
 python -m venv .venv
 .venv/bin/pip install -e ".[dev]"
 .venv/bin/pytest
+```
+
+Auf NixOS ebenfalls über `nix-shell` wrappen, sonst schlägt der Build von
+`python-rtmidi` an den fehlenden ALSA-Headern fehl:
+
+```bash
+nix-shell -p pkg-config alsa-lib --run '.venv/bin/pip install -e ".[dev]"'
 ```

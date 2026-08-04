@@ -145,6 +145,68 @@ async def test_set_volume_never_raises_when_player_absent():
 
 
 @pytest.mark.asyncio
+async def test_redrains_to_latest_after_waiting_for_player():
+    """The player is absent when set_volume(10) queues, and the sink task
+    blocks waiting for it to appear. While it's blocked, the fader moves
+    again to 80. Only 0.80 must ever reach the player once it appears --
+    the coalescing guarantee must hold across that wait, not just before
+    it."""
+    sink = SpotifySink(bus_name=TEST_BUS_NAME)
+    await sink.start()
+    fake_bus = None
+    try:
+        sink.set_volume(10)
+        # Give the sink task time to dequeue 10 and block on _owned.wait();
+        # the player isn't exported yet, so there's nothing else it could be
+        # doing. This mirrors the sleep-based synchronization already used
+        # by test_waits_for_player_that_appears_later above.
+        await asyncio.sleep(0.3)
+
+        sink.set_volume(80)
+
+        fake_bus, player = await export_fake()
+        assert await wait_for(lambda: player.sets), "value was not applied"
+        await asyncio.sleep(0.2)  # give any stragglers a chance to arrive
+        assert player.sets == [pytest.approx(0.80)]
+    finally:
+        await sink.stop()
+        if fake_bus is not None:
+            fake_bus.disconnect()
+
+
+@pytest.mark.asyncio
+async def test_reconnects_after_own_bus_connection_lost():
+    """Simulates the D-Bus daemon dying out from under the sink (e.g.
+    `systemctl --user restart dbus`): the sink's own connection -- not the
+    player's -- is severed. dbus-fast clears all user message handlers on
+    disconnect, so NameOwnerChanged can never fire again on that connection;
+    the sink must notice its own connection died, reconnect, and keep
+    delivering values instead of getting stuck retrying against a dead
+    connection forever."""
+    fake_bus, player = await export_fake()
+    sink = SpotifySink(
+        bus_name=TEST_BUS_NAME, backoff_start=0.02, backoff_max=0.05
+    )
+    await sink.start()
+    try:
+        sink.set_volume(33)
+        assert await wait_for(lambda: player.sets), "initial send failed"
+
+        # Sever the sink's own connection -- not the player's -- to simulate
+        # the D-Bus daemon (or just our link to it) dying.
+        sink._bus.disconnect()
+
+        sink.set_volume(66)
+        assert await wait_for(lambda: len(player.sets) >= 2, timeout=5.0), (
+            "value was not delivered after the sink's bus connection died"
+        )
+        assert player.sets[-1] == pytest.approx(0.66)
+    finally:
+        await sink.stop()
+        fake_bus.disconnect()
+
+
+@pytest.mark.asyncio
 async def test_unreachable_session_bus_raises_clear_error(monkeypatch):
     """A missing session bus is a setup problem, not a transient state —
     it must fail at start with a message that says so."""

@@ -11,6 +11,9 @@ from .config import (
     Config,
     ConfigMissingError,
     DEFAULT_CURVE_EXPONENT,
+    DEFAULT_SPOTIFY_BUS_NAME,
+    DEFAULT_TIDAL_WS_URL,
+    InvalidConfigError,
     default_config_path,
     load_config,
     save_config,
@@ -23,7 +26,6 @@ from .midi_source import find_port, list_input_ports, stream_cc_events
 # "RODECaster Duo:RODECaster Duo MIDI 1 28:0". If a different RodeCaster model
 # uses a different ALSA name, pass --port-hint to override.
 DEFAULT_PORT_HINT = "RODECaster"
-DEFAULT_WS_URL = "ws://localhost:24123"
 DEFAULT_HZ = 100
 
 
@@ -36,6 +38,9 @@ def main() -> int:
     parser.add_argument("--port-hint", default=DEFAULT_PORT_HINT,
                         help="Substring to match against ALSA MIDI port names (learn mode only).")
     parser.add_argument("--learn-seconds", type=float, default=10.0)
+    parser.add_argument("--target", choices=("spotify", "tidal"), default="spotify",
+                        help="Which player to control (learn mode only; "
+                             "change later by editing the config).")
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
 
@@ -72,8 +77,10 @@ async def _cmd_learn(args: argparse.Namespace) -> int:
         midi_port_name_contains=args.port_hint,
         midi_channel=channel,
         midi_cc=cc,
-        tidal_ws_url=DEFAULT_WS_URL,
         throttle_max_hz=DEFAULT_HZ,
+        target=args.target,
+        tidal_ws_url=DEFAULT_TIDAL_WS_URL,
+        spotify_bus_name=DEFAULT_SPOTIFY_BUS_NAME,
         curve_exponent=DEFAULT_CURVE_EXPONENT,
     )
     save_config(cfg, args.config)
@@ -88,6 +95,9 @@ async def _cmd_run(args: argparse.Namespace) -> int:
     except ConfigMissingError:
         print(f"Keine Config unter {args.config}.", file=sys.stderr)
         print('Erst `rodecaster-volume-bridge --learn` ausführen.', file=sys.stderr)
+        return 1
+    except InvalidConfigError as e:
+        print(str(e), file=sys.stderr)
         return 1
     if find_port(cfg.midi_port_name_contains) is None:
         print(f"No MIDI input contains {cfg.midi_port_name_contains!r}.", file=sys.stderr)

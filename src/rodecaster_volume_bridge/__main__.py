@@ -20,6 +20,7 @@ from .config import (
 )
 from .learn import detect_fader_cc
 from .midi_source import find_port, list_input_ports, stream_cc_events
+from .spotify_sink import SessionBusUnavailableError
 
 
 # Note: ALSA exposes the port without the Ø ligature. `aconnect -i` reports
@@ -103,7 +104,11 @@ async def _cmd_run(args: argparse.Namespace) -> int:
         print(f"No MIDI input contains {cfg.midi_port_name_contains!r}.", file=sys.stderr)
         print(f"Available: {list_input_ports()}", file=sys.stderr)
         return 2
-    await run_bridge(cfg)
+    try:
+        await run_bridge(cfg)
+    except (InvalidConfigError, SessionBusUnavailableError) as e:
+        print(str(e), file=sys.stderr)
+        return 1
     return 0
 
 

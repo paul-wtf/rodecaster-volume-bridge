@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "rodecaster-volume-bridge"
 version = "0.1.0"
-description = "Bridge RodeCaster MIDI fader to Tidal volume via @vmohammad/api"
+description = "Bridge a RodeCaster MIDI fader to Spotify or Tidal volume"
 requires-python = ">=3.11"
 dependencies = [
     "mido>=1.3",

@@ -3,7 +3,7 @@ import textwrap
 
 import pytest
 
-from rodecaster_tidal_bridge.config import Config, load_config, save_config, ConfigMissingError
+from rodecaster_volume_bridge.config import Config, load_config, save_config, ConfigMissingError
 
 
 def test_load_returns_typed_config(tmp_path: Path):

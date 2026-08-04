@@ -27,7 +27,7 @@ class Config:
 
 def default_config_path() -> Path:
     base = os.environ.get("XDG_CONFIG_HOME") or str(Path.home() / ".config")
-    return Path(base) / "rodecaster-tidal-bridge" / "config.toml"
+    return Path(base) / "rodecaster-volume-bridge" / "config.toml"
 
 
 def load_config(path: Path) -> Config:

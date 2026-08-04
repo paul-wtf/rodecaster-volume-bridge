@@ -1,6 +1,6 @@
 import pytest
 
-from rodecaster_tidal_bridge.scale import midi_to_volume
+from rodecaster_volume_bridge.scale import midi_to_volume
 
 
 @pytest.mark.parametrize("midi,volume", [

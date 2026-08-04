@@ -3,8 +3,8 @@ from typing import AsyncIterator
 
 import pytest
 
-from rodecaster_tidal_bridge.learn import detect_fader_cc
-from rodecaster_tidal_bridge.midi_source import CCEvent
+from rodecaster_volume_bridge.learn import detect_fader_cc
+from rodecaster_volume_bridge.midi_source import CCEvent
 
 
 async def stream(events: list[CCEvent]) -> AsyncIterator[CCEvent]:

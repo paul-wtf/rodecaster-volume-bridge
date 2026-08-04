@@ -28,7 +28,7 @@ DEFAULT_HZ = 100
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(prog="rodecaster-tidal-bridge")
+    parser = argparse.ArgumentParser(prog="rodecaster-volume-bridge")
     parser.add_argument("--learn", action="store_true",
                         help="Detect which MIDI CC the music fader sends and save it.")
     parser.add_argument("--config", type=Path, default=default_config_path(),
@@ -87,7 +87,7 @@ async def _cmd_run(args: argparse.Namespace) -> int:
         cfg = load_config(args.config)
     except ConfigMissingError:
         print(f"Keine Config unter {args.config}.", file=sys.stderr)
-        print('Erst `rodecaster-tidal-bridge --learn` ausführen.', file=sys.stderr)
+        print('Erst `rodecaster-volume-bridge --learn` ausführen.', file=sys.stderr)
         return 1
     if find_port(cfg.midi_port_name_contains) is None:
         print(f"No MIDI input contains {cfg.midi_port_name_contains!r}.", file=sys.stderr)

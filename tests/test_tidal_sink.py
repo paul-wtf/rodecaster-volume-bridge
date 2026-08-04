@@ -4,7 +4,7 @@ import json
 import pytest
 import websockets
 
-from rodecaster_tidal_bridge.tidal_sink import TidalSink
+from rodecaster_volume_bridge.tidal_sink import TidalSink
 
 
 @pytest.mark.asyncio

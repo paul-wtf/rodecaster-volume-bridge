@@ -1,9 +1,9 @@
 [Unit]
-Description=RodeCaster → Tidal MIDI Bridge
+Description=RodeCaster MIDI Volume Bridge
 After=sound.target
 
 [Service]
-ExecStart=%h/.local/bin/rodecaster-tidal-bridge
+ExecStart=%h/.local/bin/rodecaster-volume-bridge
 Restart=on-failure
 RestartSec=2
 

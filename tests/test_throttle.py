@@ -3,7 +3,7 @@ from typing import Callable
 
 import pytest
 
-from rodecaster_tidal_bridge.throttle import TrailingThrottle
+from rodecaster_volume_bridge.throttle import TrailingThrottle
 
 
 class FakeClock:

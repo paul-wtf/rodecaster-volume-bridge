@@ -1,4 +1,4 @@
-# rodecaster-tidal-bridge
+# rodecaster-volume-bridge
 
 Brücke vom RodeCaster (Pro II/Duo) USB-MIDI zur Tidal-Lautstärke über das
 [`@vmohammad/api`](https://github.com/vMohammad24/luna-plugins/tree/master/plugins/api)
@@ -14,40 +14,40 @@ TidaLuna-Plugin.
 ## Installation
 
 ```bash
-git clone <repo> ~/git/rodecaster-tidal-bridge
-cd ~/git/rodecaster-tidal-bridge
+git clone <repo> ~/git/rodecaster-volume-bridge
+cd ~/git/rodecaster-volume-bridge
 pip install --user .
 ```
 
 ## Setup (einmalig)
 
 ```bash
-rodecaster-tidal-bridge --learn
+rodecaster-volume-bridge --learn
 # bewege den Music-Fader, wenn aufgefordert
 ```
 
-Das schreibt `~/.config/rodecaster-tidal-bridge/config.toml` mit der erkannten
+Das schreibt `~/.config/rodecaster-volume-bridge/config.toml` mit der erkannten
 `channel`/`cc`-Kombination.
 
 ## Run
 
 ```bash
-rodecaster-tidal-bridge          # foreground
+rodecaster-volume-bridge          # foreground
 ```
 
 Oder als Service:
 
 ```bash
-install -Dm644 systemd/rodecaster-tidal-bridge.service \
-  ~/.config/systemd/user/rodecaster-tidal-bridge.service
+install -Dm644 systemd/rodecaster-volume-bridge.service \
+  ~/.config/systemd/user/rodecaster-volume-bridge.service
 systemctl --user daemon-reload
-systemctl --user enable --now rodecaster-tidal-bridge
-journalctl --user -u rodecaster-tidal-bridge -f
+systemctl --user enable --now rodecaster-volume-bridge
+journalctl --user -u rodecaster-volume-bridge -f
 ```
 
 ## Konfiguration
 
-`~/.config/rodecaster-tidal-bridge/config.toml`:
+`~/.config/rodecaster-volume-bridge/config.toml`:
 
 ```toml
 [midi]

@@ -60,13 +60,30 @@ class TidalSink:
                 ) as ws:
                     log.info("connected to %s", self._url)
                     backoff = self._backoff_start
-                    pending = await self._pump(ws, pending)
+                    reader = asyncio.create_task(self._read_replies(ws))
+                    try:
+                        pending = await self._pump(ws, pending)
+                    finally:
+                        reader.cancel()
+                        await asyncio.gather(reader, return_exceptions=True)
             except asyncio.CancelledError:
                 raise
             except Exception as e:
                 log.warning("websocket error (%s); reconnecting in %.2fs", e, backoff)
                 await asyncio.sleep(backoff)
                 backoff = min(backoff * 2, self._backoff_max)
+
+    async def _read_replies(self, ws: Any) -> None:
+        try:
+            async for raw in ws:
+                try:
+                    reply = json.loads(raw)
+                except ValueError:
+                    continue
+                if isinstance(reply, dict) and reply.get("type") == "error":
+                    log.warning("tidal api rejected an action: %s", reply.get("error"))
+        except websockets.ConnectionClosed:
+            pass
 
     async def _pump(self, ws: Any, pending: Optional[int] = None) -> Optional[int]:
         """Send queued volume values.

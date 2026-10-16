@@ -82,3 +82,54 @@ async def test_coalesces_to_latest_on_reconnect():
 
     # exactly one message, with the latest value
     assert received2 == [{"action": "volume", "volume": 30}]
+
+
+@pytest.mark.asyncio
+async def test_keeps_reading_server_replies():
+    """The API answers every action. Unread replies fill the client's queue,
+    it stops reading the socket, and pongs are no longer processed."""
+    pong_answered: asyncio.Future[bool] = asyncio.get_running_loop().create_future()
+
+    async def handler(ws):
+        await ws.recv()
+        for _ in range(50):
+            await ws.send(json.dumps({"type": "ok", "action": "volume", "volume": 42}))
+            await asyncio.sleep(0.005)
+        try:
+            await asyncio.wait_for(await ws.ping(), timeout=1)
+            pong_answered.set_result(True)
+        except asyncio.TimeoutError:
+            pong_answered.set_result(False)
+
+    async with websockets.serve(handler, "127.0.0.1", 0) as server:
+        port = server.sockets[0].getsockname()[1]
+        sink = TidalSink(url=f"ws://127.0.0.1:{port}", backoff_start=0.01, backoff_max=0.05)
+        await sink.start()
+        sink.set_volume(42)
+        try:
+            assert await asyncio.wait_for(pong_answered, timeout=5)
+        finally:
+            await sink.stop()
+
+
+@pytest.mark.asyncio
+async def test_logs_error_replies(caplog):
+    async def handler(ws):
+        await ws.recv()
+        await ws.send(json.dumps({"type": "error", "error": "Malformed volume action"}))
+        await ws.wait_closed()
+
+    async with websockets.serve(handler, "127.0.0.1", 0) as server:
+        port = server.sockets[0].getsockname()[1]
+        sink = TidalSink(url=f"ws://127.0.0.1:{port}", backoff_start=0.01, backoff_max=0.05)
+        await sink.start()
+        sink.set_volume(42)
+        try:
+            for _ in range(100):
+                if "Malformed volume action" in caplog.text:
+                    break
+                await asyncio.sleep(0.02)
+        finally:
+            await sink.stop()
+
+    assert "Malformed volume action" in caplog.text

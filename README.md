@@ -7,7 +7,7 @@ Musik-Players. Genau ein **Target** ist aktiv, umschaltbar über die Config:
   MPRIS/D-Bus (Session-Bus). Kein Plugin nötig, funktioniert mit dem
   Spotify-Desktop-Client.
 - **tidal** — der ursprüngliche Weg, über eine WebSocket-Verbindung zum
-  [`@vmohammad/api`](https://github.com/vMohammad24/luna-plugins/tree/master/plugins/api)
+  [TidalAPI](https://github.com/FireWall-code/TidaLuna-Plugins/tree/master/plugins/api)
   TidaLuna-Plugin auf Port `24123`.
 
 ## Voraussetzungen
@@ -23,7 +23,7 @@ Je nach Target zusätzlich:
   `org.mpris.MediaPlayer2.spotify`; Flatpak-Builds und `spotifyd` melden sich
   unter einem anderen Namen auf dem Bus an (siehe `bus_name` in der
   Konfiguration unten).
-- **Tidal**: TidaLuna mit aktivem `@vmohammad/api`-Plugin (Port `24123`).
+- **Tidal**: TidaLuna mit aktivem TidalAPI-Plugin (Port `24123`).
 
 ## Installation
 
